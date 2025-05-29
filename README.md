@@ -22,4 +22,4 @@ A fun interactive game where you control a pirate cannon to shoot numbers into a
 Just open `index.html` in your browser!
 
 ## Live demo
-[Play here!](https://username.github.io/mortar-game/)
+[Play here!](https://Elnatan-lazar.github.io/mortar-game/)
