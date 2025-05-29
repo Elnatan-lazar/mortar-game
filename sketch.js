@@ -6,7 +6,7 @@ let balls;
 let phoneNumber;
 let cells;
 let powerDirection = 1;
-let cannonX = 30;
+let cannonXRatio = 0.04; // יחס אופקי של התותח (לדוגמה: 0.04 = 4% מרוחב המסך)
 let explosions = [];
 let canShoot = true;
 
@@ -27,10 +27,9 @@ function setup() {
   cells = [];
 
   for (let i = 0; i < 10; i++) {
-    cells.push({ x: 100 + i * 65, y: 345, size: 50, number: i });
+    cells.push({ number: i });
   }
 
-  // Buttons (created once, moved dynamically in draw())
   let clearButton = createButton('⌫');
   clearButton.mousePressed(clearLast);
 
@@ -46,44 +45,51 @@ function setup() {
 function draw() {
   background(220);
 
-  // Compute scale factor
-  let scaleFactor = min(width / 800, height / 400);
-  push();
-  scale(scaleFactor);
+  // Relative sizes
+  let cellSize = width * 0.06;
+  let cellSpacing = width * 0.015;
+  let startX = width * 0.1;
+  let groundY = height - height * 0.1;
 
   // Ground
   stroke(0);
-  line(0, 350, 800, 350);
+  line(0, groundY, width, groundY);
 
   // Cells
   for (let i = 0; i < 10; i++) {
     let cell = cells[i];
-    cell.x = 100 + i * 65;
-    cell.y = 345;
+    cell.x = startX + i * (cellSize + cellSpacing);
+    cell.y = groundY - cellSize;
+
     fill(180);
-    rect(cell.x, cell.y, 50, 50);
+    rect(cell.x, cell.y, cellSize, cellSize);
     fill(255);
-    rect(cell.x + 3, cell.y + 3, 44, 44);
+    rect(cell.x + cellSize * 0.06, cell.y + cellSize * 0.06, cellSize * 0.88, cellSize * 0.88);
     fill(0);
     textAlign(CENTER, CENTER);
-    text(cell.number, cell.x + 25, cell.y + 25);
+    textSize(cellSize * 0.5);
+    text(cell.number, cell.x + cellSize / 2, cell.y + cellSize / 2);
   }
 
   // Cannon
+  let cannonX = width * cannonXRatio;
   push();
-  translate(cannonX, 350);
+  translate(cannonX, groundY);
   rotate(angle);
   fill(80);
-  rect(0, -10, 60, 20);
+  rect(0, -cellSize * 0.2, cellSize * 1.2, cellSize * 0.4);
   fill(50);
-  ellipse(0, 0, 40);
+  ellipse(0, 0, cellSize * 0.8);
   pop();
 
   // Power gauge
+  let gaugeX = width - width * 0.05;
+  let gaugeY = height * 0.5;
+  let gaugeHeight = height * 0.25;
   fill(150);
-  rect(750, 250, 20, -100);
+  rect(gaugeX, gaugeY, width * 0.02, -gaugeHeight);
   fill('red');
-  rect(750, 250, 20, -power);
+  rect(gaugeX, gaugeY, width * 0.02, -gaugeHeight * (power / 100));
 
   if (isCharging) {
     power += powerDirection * 2;
@@ -111,25 +117,22 @@ function draw() {
     }
   }
 
-  pop(); // End scale
-
-  // Phone number text (scaled)
+  // Phone number text
   fill(0);
-  textSize(20 * scaleFactor);
+  textSize(width * 0.025);
   textAlign(CENTER, CENTER);
-  text(`05${formatPhoneNumber()}`, width / 2, 30 * scaleFactor);
+  text(`05${formatPhoneNumber()}`, width / 2, height * 0.05);
 
-  // Dynamically position & size buttons
+  // Dynamic buttons
+  let scaleFactor = min(width / 800, height / 400);
   let btnSize = 30 * scaleFactor;
   let btnX = 10 * scaleFactor;
   let btnY = 10 * scaleFactor;
   let btnSpacing = 50 * scaleFactor;
-
   select('button:nth-of-type(1)').position(btnX, btnY).style('font-size', btnSize + 'px');
   select('button:nth-of-type(2)').position(btnX + btnSpacing, btnY).style('font-size', btnSize + 'px');
   select('button:nth-of-type(3)').position(btnX + 2 * btnSpacing, btnY).style('font-size', btnSize + 'px');
 
-  // Enable/disable submit button
   let btn = select('#submitBtn');
   if (phoneNumber.length === 8) {
     btn.removeAttribute('disabled');
@@ -185,8 +188,9 @@ function keyReleased() {
     isCharging = false;
     if (power > 0 && canShoot) {
       if (balls.length > 0) balls.pop();
-      balls.push(new Ball(cannonX, 350, angle, power * 0.5));
-      createExplosion(cannonX + 30 * cos(angle), 350 + 30 * sin(angle));
+      let groundY = height - height * 0.1;
+      balls.push(new Ball(width * cannonXRatio, groundY, angle, power * 0.5));
+      createExplosion(width * cannonXRatio + 30 * cos(angle), groundY + 30 * sin(angle));
       canShoot = false;
     }
     power = 0;
@@ -225,9 +229,9 @@ class Ball {
     this.x += this.vx;
     this.y += this.vy;
     this.vy += 0.2;
-    if (this.x <= 0 || this.x >= 800) this.vx *= -1;
+    if (this.x <= 0 || this.x >= width) this.vx *= -1;
     if (this.y <= 0) this.vy *= -1;
-    if (this.y >= 350) {
+    if (this.y >= height - height * 0.1) {
       let inCell = false;
       for (let cell of cells) {
         if (this.x > cell.x && this.x < cell.x + cell.size) {
@@ -241,7 +245,7 @@ class Ball {
         }
       }
       if (!inCell) {
-        this.y = 350;
+        this.y = height - height * 0.1;
         this.vy *= -this.energy;
         this.vx *= 0.9;
         if (abs(this.vy) < 1) this.vy = 0;

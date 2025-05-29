@@ -1,0 +1,48 @@
+body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(to bottom, #e0f7fa, #b2ebf2);
+  font-family: 'Arial', sans-serif;
+  color: #333;
+  text-align: center;
+}
+
+h1 {
+  margin: 10px 0;
+  font-size: 2em;
+  color: #006064;
+}
+
+p {
+  margin: 0 0 20px;
+  font-size: 1em;
+  color: #004d40;
+}
+
+canvas {
+  display: block;
+  margin: 0 auto;
+  border: 3px solid #006064;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  border-radius: 8px;
+}
+
+button {
+  background-color: #00838f;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  margin: 5px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #006064;
+}
+
+button:disabled {
+  background-color: #b0bec5;
+  cursor: not-allowed;
+}
