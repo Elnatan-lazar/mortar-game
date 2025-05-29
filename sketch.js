@@ -26,23 +26,18 @@ function setup() {
   phoneNumber = '';
   cells = [];
 
-  let cellSize = min(50, width / 15);
   for (let i = 0; i < 10; i++) {
-    let x = 100 + i * (cellSize + 15);
-    let y = height - 55;
-    cells.push({ x: x, y: y, size: cellSize, number: i });
+    cells.push({ x: 100 + i * 65, y: 345, size: 50, number: i });
   }
 
+  // Buttons (created once, moved dynamically in draw())
   let clearButton = createButton('⌫');
-  clearButton.position(10, 10);
   clearButton.mousePressed(clearLast);
 
   let resetButton = createButton('🔄');
-  resetButton.position(50, 10);
   resetButton.mousePressed(resetNumber);
 
   let submitButton = createButton('Submit');
-  submitButton.position(110, 10);
   submitButton.attribute('disabled', '');
   submitButton.mousePressed(() => alert(`Phone Number: 05${formatPhoneNumber()}`));
   submitButton.id('submitBtn');
@@ -51,29 +46,32 @@ function setup() {
 function draw() {
   background(220);
 
-  // Ground line
-  stroke(0);
-  line(0, height - 50, width, height - 50);
+  // Compute scale factor
+  let scaleFactor = min(width / 800, height / 400);
+  push();
+  scale(scaleFactor);
 
-  // Adjust cells
-  let cellSize = cells[0].size;
+  // Ground
+  stroke(0);
+  line(0, 350, 800, 350);
+
+  // Cells
   for (let i = 0; i < 10; i++) {
     let cell = cells[i];
-    cell.x = 100 + i * (cellSize + 15);
-    cell.y = height - 55;
-
+    cell.x = 100 + i * 65;
+    cell.y = 345;
     fill(180);
-    rect(cell.x, cell.y, cell.size, cell.size);
+    rect(cell.x, cell.y, 50, 50);
     fill(255);
-    rect(cell.x + 3, cell.y + 3, cell.size - 6, cell.size - 6);
+    rect(cell.x + 3, cell.y + 3, 44, 44);
     fill(0);
     textAlign(CENTER, CENTER);
-    text(cell.number, cell.x + cell.size / 2, cell.y + cell.size / 2);
+    text(cell.number, cell.x + 25, cell.y + 25);
   }
 
-  // Draw the cannon
+  // Cannon
   push();
-  translate(cannonX, height - 50);
+  translate(cannonX, 350);
   rotate(angle);
   fill(80);
   rect(0, -10, 60, 20);
@@ -83,9 +81,9 @@ function draw() {
 
   // Power gauge
   fill(150);
-  rect(width - 50, height / 2 + 50, 20, -100);
+  rect(750, 250, 20, -100);
   fill('red');
-  rect(width - 50, height / 2 + 50, 20, -power);
+  rect(750, 250, 20, -power);
 
   if (isCharging) {
     power += powerDirection * 2;
@@ -94,18 +92,17 @@ function draw() {
     }
   }
 
-  // Update and show balls
+  // Ball
   if (balls.length > 0) {
     let b = balls[balls.length - 1];
     b.update();
     b.show();
-
     if (b.vx === 0 && b.vy === 0) {
       canShoot = true;
     }
   }
 
-  // Update and show explosions
+  // Explosions
   for (let i = explosions.length - 1; i >= 0; i--) {
     explosions[i].update();
     explosions[i].show();
@@ -114,12 +111,25 @@ function draw() {
     }
   }
 
-  // Display phone number
-  fill(0);
-  textSize(20);
-  textAlign(CENTER, CENTER);
-  text(`05${formatPhoneNumber()}`, width / 2, 30);
+  pop(); // End scale
 
+  // Phone number text (scaled)
+  fill(0);
+  textSize(20 * scaleFactor);
+  textAlign(CENTER, CENTER);
+  text(`05${formatPhoneNumber()}`, width / 2, 30 * scaleFactor);
+
+  // Dynamically position & size buttons
+  let btnSize = 30 * scaleFactor;
+  let btnX = 10 * scaleFactor;
+  let btnY = 10 * scaleFactor;
+  let btnSpacing = 50 * scaleFactor;
+
+  select('button:nth-of-type(1)').position(btnX, btnY).style('font-size', btnSize + 'px');
+  select('button:nth-of-type(2)').position(btnX + btnSpacing, btnY).style('font-size', btnSize + 'px');
+  select('button:nth-of-type(3)').position(btnX + 2 * btnSpacing, btnY).style('font-size', btnSize + 'px');
+
+  // Enable/disable submit button
   let btn = select('#submitBtn');
   if (phoneNumber.length === 8) {
     btn.removeAttribute('disabled');
@@ -127,7 +137,7 @@ function draw() {
     btn.attribute('disabled', '');
   }
 
-  // Control cannon angle
+  // Cannon angle control
   if (upPressed) {
     angle -= angleSpeed;
     angleSpeed = min(angleSpeed + 0.0005, 0.02);
@@ -141,7 +151,6 @@ function draw() {
   }
 }
 
-// Format phone number: 05X-XXXX-XXX
 function formatPhoneNumber() {
   let formatted = '';
   for (let i = 0; i < 8; i++) {
@@ -157,54 +166,40 @@ function formatPhoneNumber() {
   return formatted;
 }
 
-// Mouse drag for cannon
 function mouseDragged() {
   let dy = mouseY - pmouseY;
   angle += dy * 0.005;
   limitAngle();
 }
 
-// Key control
 function keyPressed() {
   if (key === ' ') {
     isCharging = true;
   }
-  if (keyCode === UP_ARROW) {
-    upPressed = true;
-  }
-  if (keyCode === DOWN_ARROW) {
-    downPressed = true;
-  }
+  if (keyCode === UP_ARROW) upPressed = true;
+  if (keyCode === DOWN_ARROW) downPressed = true;
 }
 
 function keyReleased() {
   if (key === ' ') {
     isCharging = false;
     if (power > 0 && canShoot) {
-      if (balls.length > 0) {
-        balls.pop();
-      }
-      balls.push(new Ball(cannonX, height - 50, angle, power * 0.5));
-      createExplosion(cannonX + 30 * cos(angle), height - 50 + 30 * sin(angle));
+      if (balls.length > 0) balls.pop();
+      balls.push(new Ball(cannonX, 350, angle, power * 0.5));
+      createExplosion(cannonX + 30 * cos(angle), 350 + 30 * sin(angle));
       canShoot = false;
     }
     power = 0;
     powerDirection = 1;
   }
-  if (keyCode === UP_ARROW) {
-    upPressed = false;
-  }
-  if (keyCode === DOWN_ARROW) {
-    downPressed = false;
-  }
+  if (keyCode === UP_ARROW) upPressed = false;
+  if (keyCode === DOWN_ARROW) downPressed = false;
 }
 
-// Limit cannon angle
 function limitAngle() {
   angle = constrain(angle, -PI / 2 + 0.2, 0);
 }
 
-// Clear and reset
 function clearLast() {
   if (phoneNumber.length > 0) {
     phoneNumber = phoneNumber.slice(0, -1);
@@ -213,13 +208,10 @@ function clearLast() {
 function resetNumber() {
   phoneNumber = '';
 }
-
-// Window resize
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
 }
 
-// Ball class
 class Ball {
   constructor(x, y, angle, speed) {
     this.x = x;
@@ -233,9 +225,9 @@ class Ball {
     this.x += this.vx;
     this.y += this.vy;
     this.vy += 0.2;
-    if (this.x <= 0 || this.x >= width) this.vx *= -1;
+    if (this.x <= 0 || this.x >= 800) this.vx *= -1;
     if (this.y <= 0) this.vy *= -1;
-    if (this.y >= height - 50) {
+    if (this.y >= 350) {
       let inCell = false;
       for (let cell of cells) {
         if (this.x > cell.x && this.x < cell.x + cell.size) {
@@ -249,23 +241,19 @@ class Ball {
         }
       }
       if (!inCell) {
-        this.y = height - 50;
+        this.y = 350;
         this.vy *= -this.energy;
         this.vx *= 0.9;
         if (abs(this.vy) < 1) this.vy = 0;
         if (abs(this.vx) < 0.1) this.vx = 0;
       }
     }
-    this.x = constrain(this.x, 0, width);
-    this.y = constrain(this.y, 0, height);
   }
   show() {
     fill('blue');
     ellipse(this.x, this.y, 10);
   }
 }
-
-// Explosion class
 class Explosion {
   constructor(x, y) {
     this.particles = [];
