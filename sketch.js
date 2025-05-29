@@ -1,4 +1,4 @@
-// Final version of the game with fully proportional layout for any screen size
+// Final version of the game with proportional layout and corrected collision logic
 
 let angle;
 let power;
@@ -45,17 +45,16 @@ function setup() {
 function draw() {
   background(220);
 
-  // Calculate layout based on screen size
   let margin = width * 0.05;
   let spacing = width * 0.02;
   let cellWidth = (width - 2 * margin - spacing * (10 - 1)) / 10;
   let groundY = height - cellWidth - 20;
 
-  // Draw ground
+  // Ground
   stroke(0);
   line(0, groundY + cellWidth, width, groundY + cellWidth);
 
-  // Draw cells
+  // Cells
   for (let i = 0; i < 10; i++) {
     let cell = cells[i];
     cell.x = margin + i * (cellWidth + spacing);
@@ -72,7 +71,7 @@ function draw() {
     text(cell.number, cell.x + cellWidth / 2, cell.y + cellWidth / 2);
   }
 
-  // Draw cannon
+  // Cannon
   let cannonX = width * cannonXRatio;
   push();
   translate(cannonX, groundY + cellWidth);
@@ -99,7 +98,6 @@ function draw() {
     }
   }
 
-  // Ball updates
   if (balls.length > 0) {
     let b = balls[balls.length - 1];
     b.update();
@@ -109,7 +107,6 @@ function draw() {
     }
   }
 
-  // Explosions
   for (let i = explosions.length - 1; i >= 0; i--) {
     explosions[i].update();
     explosions[i].show();
@@ -118,13 +115,13 @@ function draw() {
     }
   }
 
-  // Phone number text
+  // Phone number
   fill(0);
   textSize(width * 0.025);
   textAlign(CENTER, CENTER);
   text(`05${formatPhoneNumber()}`, width / 2, height * 0.05);
 
-  // Button positions and sizes
+  // Buttons
   let scaleFactor = min(width / 800, height / 400);
   let btnSize = 30 * scaleFactor;
   let btnX = 10 * scaleFactor;
@@ -134,7 +131,6 @@ function draw() {
   select('button:nth-of-type(2)').position(btnX + btnSpacing, btnY).style('font-size', btnSize + 'px');
   select('button:nth-of-type(3)').position(btnX + 2 * btnSpacing, btnY).style('font-size', btnSize + 'px');
 
-  // Enable/disable submit button
   let btn = select('#submitBtn');
   if (phoneNumber.length === 8) {
     btn.removeAttribute('disabled');
@@ -142,7 +138,6 @@ function draw() {
     btn.attribute('disabled', '');
   }
 
-  // Control cannon angle
   if (upPressed) {
     angle -= angleSpeed;
     angleSpeed = min(angleSpeed + 0.0005, 0.02);
@@ -190,8 +185,11 @@ function keyReleased() {
     isCharging = false;
     if (power > 0 && canShoot) {
       if (balls.length > 0) balls.pop();
-      let groundY = height - (width - 2 * width * 0.05 - width * 0.02 * (10 - 1)) / 10 - 20;
-      balls.push(new Ball(width * cannonXRatio, groundY + (width - 2 * width * 0.05 - width * 0.02 * (10 - 1)) / 10, angle, power * 0.5));
+      let margin = width * 0.05;
+      let spacing = width * 0.02;
+      let cellWidth = (width - 2 * margin - spacing * (10 - 1)) / 10;
+      let groundY = height - cellWidth - 20;
+      balls.push(new Ball(width * cannonXRatio, groundY + cellWidth, angle, power * 0.5));
       createExplosion(width * cannonXRatio + 30 * cos(angle), groundY + 30 * sin(angle));
       canShoot = false;
     }
@@ -211,11 +209,9 @@ function clearLast() {
     phoneNumber = phoneNumber.slice(0, -1);
   }
 }
-
 function resetNumber() {
   phoneNumber = '';
 }
-
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
 }
@@ -229,17 +225,29 @@ class Ball {
     this.hit = false;
     this.energy = 0.8;
   }
+
   update() {
     this.x += this.vx;
     this.y += this.vy;
     this.vy += 0.2;
+
     if (this.x <= 0 || this.x >= width) this.vx *= -1;
     if (this.y <= 0) this.vy *= -1;
-    let groundY = height - (width - 2 * width * 0.05 - width * 0.02 * (10 - 1)) / 10 - 20;
-    if (this.y >= groundY + (width - 2 * width * 0.05 - width * 0.02 * (10 - 1)) / 10) {
+
+    let margin = width * 0.05;
+    let spacing = width * 0.02;
+    let cellWidth = (width - 2 * margin - spacing * (10 - 1)) / 10;
+    let groundY = height - cellWidth - 20;
+
+    if (this.y >= groundY + cellWidth) {
       let inCell = false;
       for (let cell of cells) {
-        if (this.x > cell.x && this.x < cell.x + cell.size) {
+        if (
+          this.x > cell.x &&
+          this.x < cell.x + cell.size &&
+          this.y > cell.y &&
+          this.y < cell.y + cell.size
+        ) {
           inCell = true;
           if (!this.hit && phoneNumber.length < 8) {
             phoneNumber += cell.number;
@@ -249,8 +257,9 @@ class Ball {
           this.vy = 0;
         }
       }
+
       if (!inCell) {
-        this.y = groundY + (width - 2 * width * 0.05 - width * 0.02 * (10 - 1)) / 10;
+        this.y = groundY + cellWidth;
         this.vy *= -this.energy;
         this.vx *= 0.9;
         if (abs(this.vy) < 1) this.vy = 0;
@@ -258,6 +267,7 @@ class Ball {
       }
     }
   }
+
   show() {
     fill('blue');
     ellipse(this.x, this.y, 10);
@@ -295,7 +305,6 @@ class Explosion {
     return this.particles.every(p => p.alpha <= 0);
   }
 }
-
 function createExplosion(x, y) {
   explosions.push(new Explosion(x, y));
 }
