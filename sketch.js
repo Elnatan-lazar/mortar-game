@@ -16,7 +16,7 @@ let downPressed = false;
 let angleSpeed = 0.002;
 
 function setup() {
-  createCanvas(800, 400);
+  createCanvas(windowWidth, windowHeight);
   angleMode(RADIANS);
 
   angle = -PI / 4;
@@ -26,8 +26,11 @@ function setup() {
   phoneNumber = '';
   cells = [];
 
+  let cellSize = min(50, width / 15);
   for (let i = 0; i < 10; i++) {
-    cells.push({ x: 100 + i * 65, y: 345, size: 50, number: i });
+    let x = 100 + i * (cellSize + 15);
+    let y = height - 55;
+    cells.push({ x: x, y: y, size: cellSize, number: i });
   }
 
   let clearButton = createButton('⌫');
@@ -48,24 +51,29 @@ function setup() {
 function draw() {
   background(220);
 
-  // Ground
+  // Ground line
   stroke(0);
-  line(0, 350, width, 350);
+  line(0, height - 50, width, height - 50);
 
-  // Number cells (sunken look)
-  for (let cell of cells) {
+  // Adjust cells
+  let cellSize = cells[0].size;
+  for (let i = 0; i < 10; i++) {
+    let cell = cells[i];
+    cell.x = 100 + i * (cellSize + 15);
+    cell.y = height - 55;
+
     fill(180);
     rect(cell.x, cell.y, cell.size, cell.size);
     fill(255);
     rect(cell.x + 3, cell.y + 3, cell.size - 6, cell.size - 6);
     fill(0);
     textAlign(CENTER, CENTER);
-    text(cell.number, cell.x + 25, cell.y + 25);
+    text(cell.number, cell.x + cell.size / 2, cell.y + cell.size / 2);
   }
 
   // Draw the cannon
   push();
-  translate(cannonX, 350);
+  translate(cannonX, height - 50);
   rotate(angle);
   fill(80);
   rect(0, -10, 60, 20);
@@ -106,10 +114,11 @@ function draw() {
     }
   }
 
-  // Display phone number in Israeli format
+  // Display phone number
   fill(0);
   textSize(20);
-  text(`05${formatPhoneNumber()}`, 400, 30);
+  textAlign(CENTER, CENTER);
+  text(`05${formatPhoneNumber()}`, width / 2, 30);
 
   let btn = select('#submitBtn');
   if (phoneNumber.length === 8) {
@@ -118,7 +127,7 @@ function draw() {
     btn.attribute('disabled', '');
   }
 
-  // Control angle acceleration with arrow keys
+  // Control cannon angle
   if (upPressed) {
     angle -= angleSpeed;
     angleSpeed = min(angleSpeed + 0.0005, 0.02);
@@ -148,14 +157,14 @@ function formatPhoneNumber() {
   return formatted;
 }
 
-// Smooth cannon rotation with mouse drag
+// Mouse drag for cannon
 function mouseDragged() {
   let dy = mouseY - pmouseY;
   angle += dy * 0.005;
   limitAngle();
 }
 
-// Control cannon angle with keys
+// Key control
 function keyPressed() {
   if (key === ' ') {
     isCharging = true;
@@ -168,23 +177,20 @@ function keyPressed() {
   }
 }
 
-// Stop charging and shoot if allowed
 function keyReleased() {
   if (key === ' ') {
     isCharging = false;
-
     if (power > 0 && canShoot) {
       if (balls.length > 0) {
         balls.pop();
       }
-      balls.push(new Ball(cannonX, 350, angle, power * 0.5));
-      createExplosion(cannonX + 30 * cos(angle), 350 + 30 * sin(angle));
+      balls.push(new Ball(cannonX, height - 50, angle, power * 0.5));
+      createExplosion(cannonX + 30 * cos(angle), height - 50 + 30 * sin(angle));
       canShoot = false;
     }
     power = 0;
     powerDirection = 1;
   }
-
   if (keyCode === UP_ARROW) {
     upPressed = false;
   }
@@ -193,21 +199,24 @@ function keyReleased() {
   }
 }
 
-// Limit cannon angle to avoid shooting straight up
+// Limit cannon angle
 function limitAngle() {
   angle = constrain(angle, -PI / 2 + 0.2, 0);
 }
 
-// Clear last digit
+// Clear and reset
 function clearLast() {
   if (phoneNumber.length > 0) {
     phoneNumber = phoneNumber.slice(0, -1);
   }
 }
-
-// Reset phone number
 function resetNumber() {
   phoneNumber = '';
+}
+
+// Window resize
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
 }
 
 // Ball class
@@ -220,20 +229,13 @@ class Ball {
     this.hit = false;
     this.energy = 0.8;
   }
-
   update() {
     this.x += this.vx;
     this.y += this.vy;
     this.vy += 0.2;
-
-    if (this.x <= 0 || this.x >= width) {
-      this.vx *= -1;
-    }
-    if (this.y <= 0) {
-      this.vy *= -1;
-    }
-
-    if (this.y >= 350) {
+    if (this.x <= 0 || this.x >= width) this.vx *= -1;
+    if (this.y <= 0) this.vy *= -1;
+    if (this.y >= height - 50) {
       let inCell = false;
       for (let cell of cells) {
         if (this.x > cell.x && this.x < cell.x + cell.size) {
@@ -247,27 +249,20 @@ class Ball {
         }
       }
       if (!inCell) {
-        this.y = 350;
+        this.y = height - 50;
         this.vy *= -this.energy;
         this.vx *= 0.9;
         if (abs(this.vy) < 1) this.vy = 0;
         if (abs(this.vx) < 0.1) this.vx = 0;
       }
     }
-
     this.x = constrain(this.x, 0, width);
     this.y = constrain(this.y, 0, height);
   }
-
   show() {
     fill('blue');
     ellipse(this.x, this.y, 10);
   }
-}
-
-// Create an explosion at (x, y)
-function createExplosion(x, y) {
-  explosions.push(new Explosion(x, y));
 }
 
 // Explosion class
@@ -284,7 +279,6 @@ class Explosion {
       });
     }
   }
-
   update() {
     for (let p of this.particles) {
       p.x += p.vx;
@@ -292,7 +286,6 @@ class Explosion {
       p.alpha -= 5;
     }
   }
-
   show() {
     noStroke();
     for (let p of this.particles) {
@@ -300,8 +293,10 @@ class Explosion {
       ellipse(p.x, p.y, 10);
     }
   }
-
   isDone() {
     return this.particles.every(p => p.alpha <= 0);
   }
+}
+function createExplosion(x, y) {
+  explosions.push(new Explosion(x, y));
 }
